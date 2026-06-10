@@ -1,0 +1,49 @@
+<div [class.dark]="isDarkMode">
+  <div class="min-h-screen bg-[#fcfcfc] dark:bg-[#121212] transition-colors duration-300 font-sans select-none pb-16">
+    
+    <div class="max-w-5xl mx-auto p-4 flex justify-end">
+      <button (click)="isDarkMode = !isDarkMode" 
+              class="text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors text-2xl p-2">
+        <i class="fa-solid" [ngClass]="isDarkMode ? 'fa-sun' : 'fa-moon'"></i>
+      </button>
+    </div>
+
+    <header class="text-center mb-10 sm:mb-16 mt-2">
+      <h1 class="text-5xl sm:text-6xl font-black text-slate-900 dark:text-white tracking-tighter mb-1" 
+          style="font-family: 'Comic Sans MS', 'Chalkboard SE', sans-serif;">
+        Minijuegos
+      </h1>
+      <p class="text-lg text-slate-600 dark:text-slate-400 font-medium tracking-wide">
+        para entretener a <a target="_blank" href="https://lostdou.dev">lostdou</a>
+      </p>
+    </header>
+
+    <div class="max-w-4xl mx-auto px-4 grid grid-cols-1 sm:grid-cols-2 gap-6">
+      
+      <ng-container *ngFor="let game of games">
+        
+        <a [routerLink]="game.route" 
+           class="group block relative rounded-2xl overflow-hidden cursor-pointer h-40 sm:h-48 border-4 border-slate-900 dark:border-black transition-all"
+           [ngClass]="game.bgClass"
+           style="box-shadow: 6px 6px 0px 0px rgba(15,23,42,1);" 
+           onmouseover="this.style.transform='translate(2px, 2px)'; this.style.boxShadow='4px 4px 0px 0px rgba(15,23,42,1)';"
+           onmouseout="this.style.transform='translate(0px, 0px)'; this.style.boxShadow='6px 6px 0px 0px rgba(15,23,42,1)';">
+           
+           <div class="absolute inset-0 opacity-10 pointer-events-none" 
+                style="background-image: radial-gradient(circle, #000 2px, transparent 2px); background-size: 24px 24px;"></div>
+           
+           <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+             <h2 class="text-4xl sm:text-5xl font-black tracking-wider" 
+                 [ngClass]="game.textClass" 
+                 style="text-shadow: 3px 3px 0px rgba(0,0,0,0.15);">
+               {{ game.title }}
+             </h2>
+           </div>
+        </a>
+
+
+      </ng-container>
+
+    </div>
+  </div>
+</div>

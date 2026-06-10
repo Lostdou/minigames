@@ -1,0 +1,122 @@
+<div [class.dark]="isDarkMode">
+  <div class="min-h-screen bg-[#fcfcfc] dark:bg-[#121212] text-slate-900 dark:text-white p-2 sm:p-4 font-sans select-none transition-colors duration-300 flex flex-col items-center">
+    
+    <div class="max-w-md w-full flex justify-between items-center py-2 mb-2">
+      <a routerLink="/" 
+         class="px-4 py-1.5 bg-white dark:bg-slate-800 border-4 border-slate-900 dark:border-black rounded-xl font-bold text-sm transition-all shadow-[3px_3px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_0_#000]">
+        <i class="fa-solid fa-arrow-left mr-1"></i> Volver
+      </a>
+
+      <button (click)="toggleDarkMode()" 
+              class="text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors text-2xl p-2">
+        <i class="fa-solid" [ngClass]="isDarkMode ? 'fa-sun' : 'fa-moon'"></i>
+      </button>
+    </div>
+
+    <div class="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-2xl border-4 border-slate-900 dark:border-black max-w-md w-full flex flex-col items-center relative transition-colors duration-300 shadow-[6px_6px_0_0_#000]">
+      
+      <h1 class="text-3xl sm:text-4xl font-black text-center mb-4 text-slate-900 dark:text-white tracking-tight"
+          style="font-family: 'Comic Sans MS', 'Chalkboard SE', sans-serif;">
+        Sudoku
+      </h1>
+
+      <div *ngIf="!gameState" class="flex flex-col gap-4 my-6 w-full max-w-sm px-4">
+        
+        <p class="text-center text-slate-500 dark:text-slate-400 font-bold text-sm tracking-widest mb-2 uppercase">
+          Selecciona la dificultad
+        </p>
+
+        <button (click)="newGame(30)" 
+                class="w-full p-4 bg-[#34d399] rounded-2xl border-4 border-slate-900 dark:border-black transition-all shadow-[4px_4px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_#000] flex items-center justify-between group">
+          <div class="text-left">
+            <h3 class="text-slate-900 font-black text-2xl tracking-tight">FÁCIL</h3>
+          </div>
+          <div class="w-12 h-12 bg-white/30 rounded-xl border-2 border-slate-900 flex items-center justify-center text-2xl group-hover:rotate-12 transition-transform">
+            <i class="fa-solid fa-mug-hot text-slate-900"></i>
+          </div>
+        </button>
+
+        <button (click)="newGame(40)" 
+                class="w-full p-4 bg-[#fbbf24] rounded-2xl border-4 border-slate-900 dark:border-black transition-all shadow-[4px_4px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_#000] flex items-center justify-between group">
+          <div class="text-left">
+            <h3 class="text-slate-900 font-black text-2xl tracking-tight">MEDIO</h3>
+          </div>
+          <div class="w-12 h-12 bg-white/30 rounded-xl border-2 border-slate-900 flex items-center justify-center text-2xl group-hover:rotate-12 transition-transform">
+            <i class="fa-solid fa-brain text-slate-900"></i>
+          </div>
+        </button>
+
+        <button (click)="newGame(50)" 
+                class="w-full p-4 bg-[#f43f5e] rounded-2xl border-4 border-slate-900 dark:border-black transition-all shadow-[4px_4px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_#000] flex items-center justify-between group">
+          <div class="text-left">
+            <h3 class="text-white font-black text-2xl tracking-tight">DIFÍCIL</h3>
+          </div>
+          <div class="w-12 h-12 bg-black/20 rounded-xl border-2 border-slate-900 dark:border-black flex items-center justify-center text-2xl group-hover:rotate-12 transition-transform">
+            <i class="fa-solid fa-fire text-white"></i>
+          </div>
+        </button>
+      </div>
+
+      <div *ngIf="gameState" class="flex flex-col items-center w-full">
+        
+        <div class="grid grid-cols-9 grid-rows-9 gap-0 border-4 border-slate-900 dark:border-black bg-slate-900 dark:bg-black w-full aspect-square rounded-lg overflow-hidden shadow-sm">
+          <ng-container *ngFor="let row of gameState.board; let r = index">
+            <ng-container *ngFor="let cell of row; let c = index">
+              
+              <div (click)="selectCell(r, c)"
+                   class="w-full h-full flex items-center justify-center text-base sm:text-xl md:text-2xl font-black cursor-pointer transition-colors duration-150 border-r border-b border-slate-300 dark:border-slate-800"
+                   [ngClass]="{
+                     'border-r-4 !border-r-slate-900 dark:!border-r-black': (c + 1) % 3 === 0 && c !== 8,
+                     'border-b-4 !border-b-slate-900 dark:!border-b-black': (r + 1) % 3 === 0 && r !== 8,
+                     '!bg-emerald-400 dark:!bg-emerald-500 !text-black': isAnimating(r, c),
+                     'bg-[#8b5cf6] text-white dark:bg-[#6d28d9]': selectedRow === r && selectedCol === c && !isError(r, c) && !isAnimating(r, c),
+                     'bg-red-400 text-black dark:bg-red-600 dark:text-white': selectedRow === r && selectedCol === c && isError(r, c),
+                     'bg-red-100 text-red-600 dark:bg-red-950 dark:text-red-400': (selectedRow !== r || selectedCol !== c) && isError(r, c),
+                     'bg-purple-100 dark:bg-purple-950/60 text-slate-900 dark:text-purple-200': isHighlighted(r, c) && !(selectedRow === r && selectedCol === c) && !isError(r, c) && !isAnimating(r, c),
+                     'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100': isInitialCell(r, c) && !isHighlighted(r, c) && !(selectedRow === r && selectedCol === c) && !isError(r, c) && !isAnimating(r, c),
+                     'bg-slate-50 dark:bg-slate-800/40 text-blue-600 dark:text-blue-400': !isInitialCell(r, c) && !isHighlighted(r, c) && !(selectedRow === r && selectedCol === c) && !isError(r, c) && !isAnimating(r, c)
+                   }">
+                {{ cell !== 0 ? cell : '' }}
+              </div>
+                     
+            </ng-container>
+          </ng-container>
+        </div>
+
+        <div class="mt-5 grid grid-cols-5 gap-2 w-full max-w-[320px]">
+          <button *ngFor="let n of [1,2,3,4,5,6,7,8,9]" 
+                  (click)="!isNumberCompleted(n) ? inputNumber(n) : null"
+                  [ngClass]="{
+                    'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white shadow-[3px_3px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_0_#000]': !isNumberCompleted(n),
+                    'bg-slate-200 dark:bg-slate-900 text-emerald-500 opacity-40 cursor-default': isNumberCompleted(n)
+                  }"
+                  class="text-xl font-black rounded-xl border-2 sm:border-4 border-slate-900 dark:border-black flex items-center justify-center h-10 sm:h-12 transition-all">
+            <span *ngIf="!isNumberCompleted(n)">{{ n }}</span>
+            <i *ngIf="isNumberCompleted(n)" class="fa-solid fa-check"></i>
+          </button>
+
+          <button (click)="inputNumber(0)"
+                  class="bg-rose-100 dark:bg-rose-950/40 text-rose-600 text-xl font-black rounded-xl border-2 sm:border-4 border-slate-900 dark:border-black flex items-center justify-center h-10 sm:h-12 transition-all shadow-[3px_3px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_0_#000]">
+            <i class="fa-solid fa-eraser"></i>
+          </button>
+        </div>
+
+        <div class="mt-6 w-full max-w-[320px] flex flex-col sm:flex-row gap-3 justify-between">
+          
+          <button (click)="resetCurrentBoard()" 
+                  class="flex-1 py-2 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs uppercase tracking-wider rounded-xl border-2 sm:border-4 border-slate-900 dark:border-black transition-all shadow-[2px_2px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0_0_#000]">
+            <i class="fa-solid fa-eraser mr-1"></i> Limpiar
+          </button>
+
+          <button (click)="changeDifficulty()" 
+                  class="flex-1 py-2 bg-indigo-200 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-200 font-bold text-xs uppercase tracking-wider rounded-xl border-2 sm:border-4 border-slate-900 dark:border-black transition-all shadow-[2px_2px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0_0_#000]">
+            <i class="fa-solid fa-plus mr-1"></i> Nuevo
+          </button>
+          
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</div>

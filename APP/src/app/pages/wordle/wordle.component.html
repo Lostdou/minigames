@@ -1,0 +1,159 @@
+<div [class.dark]="isDarkMode">
+  <div class="min-h-screen bg-[#fcfcfc] dark:bg-[#121212] text-slate-900 dark:text-white p-2 sm:p-4 font-sans select-none transition-colors duration-300 flex flex-col items-center">
+    
+    <div class="max-w-md w-full flex justify-between items-center py-2 mb-2">
+      <a routerLink="/" 
+         class="px-4 py-1.5 bg-white dark:bg-slate-800 border-4 border-slate-900 dark:border-black rounded-xl font-bold text-sm transition-all shadow-[3px_3px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_0_#000]">
+        <i class="fa-solid fa-arrow-left mr-1"></i> Volver
+      </a>
+
+      <button (click)="toggleDarkMode()" 
+              class="text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors text-2xl p-2">
+        <i class="fa-solid" [ngClass]="isDarkMode ? 'fa-sun' : 'fa-moon'"></i>
+      </button>
+    </div>
+
+    <div *ngIf="errorMessage" 
+         class="fixed top-20 z-50 bg-rose-500 text-white px-6 py-3 rounded-xl border-4 border-slate-900 font-black tracking-wide shadow-[4px_4px_0_0_#000] animate-bounce">
+      {{ errorMessage }}
+    </div>
+
+    <div class="bg-white dark:bg-slate-800 p-3 sm:p-6 rounded-2xl border-[3px] sm:border-4 border-slate-900 dark:border-black max-w-md w-full flex flex-col items-center relative transition-colors duration-300 shadow-[6px_6px_0_0_#000]">
+      
+      <div class="flex flex-col items-center mb-5 sm:mb-6 w-full">
+        <h1 class="text-3xl sm:text-4xl font-black text-center mb-3 sm:mb-4 text-slate-900 dark:text-white tracking-tight"
+            style="font-family: 'Comic Sans MS', 'Chalkboard SE', sans-serif;">
+          Wordle
+        </h1>
+        
+        <div class="flex bg-slate-200 dark:bg-slate-700 p-1 rounded-xl border-[3px] sm:border-4 border-slate-900 dark:border-black shadow-[3px_3px_0_0_#000]">
+          <button (click)="changeLanguage('es')"
+                  class="px-4 sm:px-6 py-1.5 font-black text-xs sm:text-sm rounded-lg transition-colors"
+                  [ngClass]="currentLang === 'es' ? 'bg-[#34d399] text-slate-900 border-2 border-slate-900' : 'text-slate-500 dark:text-slate-400 border-2 border-transparent'">
+            ESPAÑOL
+          </button>
+          <button (click)="changeLanguage('en')"
+                  class="px-4 sm:px-6 py-1.5 font-black text-xs sm:text-sm rounded-lg transition-colors"
+                  [ngClass]="currentLang === 'en' ? 'bg-[#8b5cf6] text-white border-2 border-slate-900 dark:border-black' : 'text-slate-500 dark:text-slate-400 border-2 border-transparent'">
+            ENGLISH
+          </button>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-1.5 sm:gap-2 mb-6 sm:mb-8 w-full items-center">
+        <div *ngFor="let r of [0, 1, 2, 3, 4, 5]" class="flex gap-1.5 sm:gap-2">
+          
+          <ng-container *ngIf="r < guesses.length">
+            <div *ngFor="let c of [0, 1, 2, 3, 4]" 
+                 class="w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center text-2xl sm:text-3xl font-black uppercase border-[3px] sm:border-4 border-slate-900 dark:border-black rounded-xl"
+                 [ngClass]="{
+                   'bg-[#34d399] text-slate-900': getStatusesForGuess(guesses[r])[c] === 'correct',
+                   'bg-[#fbbf24] text-slate-900': getStatusesForGuess(guesses[r])[c] === 'present',
+                   'bg-slate-400 dark:bg-slate-600 text-slate-900 dark:text-slate-200': getStatusesForGuess(guesses[r])[c] === 'absent'
+                 }">
+              {{ guesses[r][c] }}
+            </div>
+          </ng-container>
+
+          <ng-container *ngIf="r === guesses.length">
+            <div *ngFor="let c of [0, 1, 2, 3, 4]" 
+                 class="w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center text-2xl sm:text-3xl font-black uppercase border-[3px] sm:border-4 rounded-xl transition-all"
+                 [ngClass]="currentGuess[c] ? 'border-slate-900 dark:border-slate-300 bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white scale-105' : 'border-slate-300 dark:border-slate-500 bg-slate-50 dark:bg-slate-800 text-transparent'">
+              {{ currentGuess[c] || '' }}
+            </div>
+          </ng-container>
+
+          <ng-container *ngIf="r > guesses.length">
+            <div *ngFor="let i of [0, 1, 2, 3, 4]" 
+                 class="w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center border-[3px] sm:border-4 border-slate-200 dark:border-slate-600 rounded-xl bg-slate-50 dark:bg-slate-700/30">
+            </div>
+          </ng-container>
+
+        </div>
+      </div>
+
+      <div *ngIf="gameStatus === 'playing'" class="flex flex-col gap-1.5 sm:gap-2 w-full px-0 sm:px-1">
+        
+        <div class="flex justify-center gap-1 sm:gap-1.5 w-full">
+          <button *ngFor="let key of ['Q','W','E','R','T','Y','U','I','O','P']" 
+                  (click)="addLetter(key)"
+                  class="flex-1 h-11 sm:h-14 font-black text-xs sm:text-lg rounded-lg border-2 sm:border-4 border-slate-900 dark:border-black shadow-[2px_2px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0_0_#000] active:shadow-none active:translate-y-[2px] transition-all flex items-center justify-center"
+                  [ngClass]="{
+                    'bg-[#34d399] text-slate-900': keyboardStatuses[key] === 'correct',
+                    'bg-[#fbbf24] text-slate-900': keyboardStatuses[key] === 'present',
+                    'bg-slate-400 dark:bg-slate-600 text-slate-900 dark:text-slate-300 opacity-60': keyboardStatuses[key] === 'absent',
+                    'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white': !keyboardStatuses[key]
+                  }">
+            {{ key }}
+          </button>
+        </div>
+        
+        <div class="flex justify-center gap-1 sm:gap-1.5 w-[95%] sm:w-[90%] mx-auto">
+          <button *ngFor="let key of ['A','S','D','F','G','H','J','K','L']" 
+                  (click)="addLetter(key)"
+                  class="flex-1 h-11 sm:h-14 font-black text-xs sm:text-lg rounded-lg border-2 sm:border-4 border-slate-900 dark:border-black shadow-[2px_2px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0_0_#000] active:shadow-none active:translate-y-[2px] transition-all flex items-center justify-center"
+                  [ngClass]="{
+                    'bg-[#34d399] text-slate-900': keyboardStatuses[key] === 'correct',
+                    'bg-[#fbbf24] text-slate-900': keyboardStatuses[key] === 'present',
+                    'bg-slate-400 dark:bg-slate-600 text-slate-900 dark:text-slate-300 opacity-60': keyboardStatuses[key] === 'absent',
+                    'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white': !keyboardStatuses[key]
+                  }">
+            {{ key }}
+          </button>
+          <button *ngIf="currentLang === 'es'" (click)="addLetter('Ñ')"
+                  class="flex-1 h-11 sm:h-14 font-black text-xs sm:text-lg rounded-lg border-2 sm:border-4 border-slate-900 dark:border-black shadow-[2px_2px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0_0_#000] active:shadow-none active:translate-y-[2px] transition-all flex items-center justify-center"
+                  [ngClass]="{
+                    'bg-[#34d399] text-slate-900': keyboardStatuses['Ñ'] === 'correct',
+                    'bg-[#fbbf24] text-slate-900': keyboardStatuses['Ñ'] === 'present',
+                    'bg-slate-400 dark:bg-slate-600 text-slate-900 dark:text-slate-300 opacity-60': keyboardStatuses['Ñ'] === 'absent',
+                    'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white': !keyboardStatuses['Ñ']
+                  }">
+            Ñ
+          </button>
+        </div>
+        
+        <div class="flex justify-center gap-1 sm:gap-1.5 w-full">
+          <button (click)="submitGuess()"
+                  class="px-1.5 sm:px-4 h-11 sm:h-14 bg-indigo-400 dark:bg-indigo-600 text-slate-900 dark:text-white font-black text-[10px] sm:text-sm rounded-lg border-2 sm:border-4 border-slate-900 dark:border-black shadow-[2px_2px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0_0_#000] active:shadow-none active:translate-y-[2px] transition-all flex items-center justify-center">
+            ENVIAR
+          </button>
+          
+          <button *ngFor="let key of ['Z','X','C','V','B','N','M']" 
+                  (click)="addLetter(key)"
+                  class="flex-1 h-11 sm:h-14 font-black text-xs sm:text-lg rounded-lg border-2 sm:border-4 border-slate-900 dark:border-black shadow-[2px_2px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0_0_#000] active:shadow-none active:translate-y-[2px] transition-all flex items-center justify-center"
+                  [ngClass]="{
+                    'bg-[#34d399] text-slate-900': keyboardStatuses[key] === 'correct',
+                    'bg-[#fbbf24] text-slate-900': keyboardStatuses[key] === 'present',
+                    'bg-slate-400 dark:bg-slate-600 text-slate-900 dark:text-slate-300 opacity-60': keyboardStatuses[key] === 'absent',
+                    'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white': !keyboardStatuses[key]
+                  }">
+            {{ key }}
+          </button>
+
+          <button (click)="deleteLetter()"
+                  class="px-3 sm:px-4 h-11 sm:h-14 bg-rose-400 dark:bg-rose-600 text-slate-900 dark:text-white font-black text-sm sm:text-lg rounded-lg border-2 sm:border-4 border-slate-900 dark:border-black shadow-[2px_2px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0_0_#000] active:shadow-none active:translate-y-[2px] transition-all flex items-center justify-center">
+            <i class="fa-solid fa-delete-left"></i>
+          </button>
+        </div>
+      </div>
+
+      <div *ngIf="gameStatus !== 'playing'" 
+           class="w-full mt-2 p-6 rounded-xl border-4 border-slate-900 text-center animate-fade-in"
+           [ngClass]="gameStatus === 'won' ? 'bg-[#34d399] dark:border-black' : 'bg-rose-400 dark:border-black'">
+        
+        <h2 class="text-3xl font-black text-slate-900 mb-2">
+          {{ gameStatus === 'won' ? '¡LO LOGRASTE!' : '¡CASI!' }}
+        </h2>
+        
+        <p class="text-slate-900 font-bold mb-4">
+          La palabra era: <span class="bg-white/50 px-2 py-1 rounded text-xl ml-1">{{ targetWord }}</span>
+        </p>
+
+        <div class="bg-slate-900/10 p-3 rounded-lg font-bold text-slate-900 text-sm">
+          <i class="fa-solid fa-clock mr-2"></i> Vuelve mañana a por la siguiente.
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
