@@ -36,5 +36,5 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./APP/dist/app/browser 
           publish_branch: gh-pages
-          cname: minigames.lostdou.dev
+          cname: mg.lostdou.dev
           force_orphan: true 
