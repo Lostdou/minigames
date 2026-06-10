@@ -1,4 +1,4 @@
-name: Deploy en gh-pages
+name: Deploy en gh-pahes
 
 on:
   push:
@@ -9,7 +9,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write 
 
     steps:
       - name: Checkout del código
@@ -18,20 +18,23 @@ jobs:
       - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20' 
+          node-version: '20'
           cache: 'npm'
+          cache-dependency-path: './APP/package-lock.json' 
 
       - name: Instalar dependencias
+        working-directory: ./APP
         run: npm ci
 
-      - name: Construir el proyecto
+      - name: Construir el proyecto (PWA)
+        working-directory: ./APP
         run: npm run build -- --configuration production
 
       - name: Desplegar a GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist/app/browser 
+          publish_dir: ./APP/dist/app/browser 
           publish_branch: gh-pages
-          cname: minigames.lostdou.dev 
-          force_orphan: true
+          cname: minigames.lostdou.dev
+          force_orphan: true 
