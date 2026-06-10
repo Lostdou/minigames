@@ -1,0 +1,82 @@
+{
+  "configVersion": 1,
+  "timestamp": 1781062285284,
+  "index": "/index.html",
+  "assetGroups": [
+    {
+      "name": "Minigames",
+      "installMode": "prefetch",
+      "updateMode": "prefetch",
+      "cacheQueryOptions": {
+        "ignoreVary": true
+      },
+      "urls": [
+        "/index.html",
+        "/main-V2BYHVJ4.js",
+        "/manifest.webmanifest",
+        "/polyfills-5CFQRCPP.js",
+        "/styles-36AW6TKX.css"
+      ],
+      "patterns": [
+        "https:\\/\\/fonts\\.googleapis\\.com\\/.*",
+        "https:\\/\\/cdnjs\\.cloudflare\\.com\\/.*"
+      ]
+    },
+    {
+      "name": "assets",
+      "installMode": "lazy",
+      "updateMode": "prefetch",
+      "cacheQueryOptions": {
+        "ignoreVary": true
+      },
+      "urls": [
+        "/icons/icon-128x128.png",
+        "/icons/icon-144x144.png",
+        "/icons/icon-152x152.png",
+        "/icons/icon-192x192.png",
+        "/icons/icon-384x384.png",
+        "/icons/icon-512x512.png",
+        "/icons/icon-72x72.png",
+        "/icons/icon-96x96.png",
+        "/words.json"
+      ],
+      "patterns": []
+    }
+  ],
+  "dataGroups": [],
+  "hashTable": {
+    "/icons/icon-128x128.png": "0544528a01d4980ed867b6bdec0c6e13d78d2b24",
+    "/icons/icon-144x144.png": "d049d4331e8775ca5d8e16b0a4d838b4de0a9212",
+    "/icons/icon-152x152.png": "9fbf448353fffc726f5908852d9c84d78aa14df5",
+    "/icons/icon-192x192.png": "5373a99b884d67da44ecd63313d27c51b5b9f19b",
+    "/icons/icon-384x384.png": "34ae36b15ba6a640a94e731bd74df070133b3789",
+    "/icons/icon-512x512.png": "9cbe3399aad45e280bb756b724020a7961bcf44b",
+    "/icons/icon-72x72.png": "b383bf8a01921d71e9b28efd6e7bc9ebb6cf5900",
+    "/icons/icon-96x96.png": "0cdef7dbe43ec46b4545ae490c92d564c7f71757",
+    "/index.html": "91588516180efac69c17095ae985af0483eb2515",
+    "/main-V2BYHVJ4.js": "1478a08641a8860067cf1f83a11c1862a8e3a46c",
+    "/manifest.webmanifest": "d963064e39a778cacdbf8af07151392fdc69eefd",
+    "/polyfills-5CFQRCPP.js": "f2241e9a25858f895ce299d15f6f22e849e2fd72",
+    "/styles-36AW6TKX.css": "173fa74a40cd51f896da8df76e2a21ac7900097e",
+    "/words.json": "667629041b707183b66076290c5e417b0cbd4b44"
+  },
+  "navigationUrls": [
+    {
+      "positive": true,
+      "regex": "^\\/.*$"
+    },
+    {
+      "positive": false,
+      "regex": "^\\/(?:.+\\/)?[^/]*\\.[^/]*$"
+    },
+    {
+      "positive": false,
+      "regex": "^\\/(?:.+\\/)?[^/]*__[^/]*$"
+    },
+    {
+      "positive": false,
+      "regex": "^\\/(?:.+\\/)?[^/]*__[^/]*\\/.*$"
+    }
+  ],
+  "navigationRequestStrategy": "performance"
+}
