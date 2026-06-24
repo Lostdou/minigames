@@ -1,0 +1,145 @@
+<div [class.dark]="isDarkMode">
+  <div class="min-h-screen bg-[#fcfcfc] dark:bg-[#121212] text-slate-900 dark:text-white p-2 sm:p-4 font-sans select-none transition-colors duration-300 flex flex-col items-center">
+         
+    <div class="max-w-md w-full flex justify-between items-center py-2 mb-2">
+      <a routerLink="/"
+          class="px-4 py-1.5 bg-white dark:bg-slate-800 border-4 border-slate-900 dark:border-black rounded-xl font-bold text-sm transition-all shadow-[3px_3px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_0_#000]">
+        <i class="fa-solid fa-arrow-left mr-1"></i> Volver
+      </a>
+      <button (click)="toggleDarkMode()"
+               class="text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors text-2xl p-2">
+        <i class="fa-solid" [ngClass]="isDarkMode ? 'fa-sun' : 'fa-moon'"></i>
+      </button>
+    </div>
+
+    <div class="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-2xl border-4 border-slate-900 dark:border-black max-w-md w-full flex flex-col items-center relative transition-colors duration-300 shadow-[6px_6px_0_0_#000]">
+             
+      <h1 class="text-3xl sm:text-4xl font-black text-center mb-6 text-slate-900 dark:text-white tracking-tight"
+          style="font-family: 'Comic Sans MS', 'Chalkboard SE', sans-serif;">
+        Historial de Juegos
+      </h1>
+
+      <div class="w-full mb-6">
+        <h2 class="text-xl font-black mb-3 border-b-4 border-slate-900 dark:border-slate-700 pb-1 flex justify-between items-center">
+          <span><i class="fa-solid fa-table-cells mr-2"></i>Sudoku</span>
+          <span class="text-xs bg-emerald-400 text-slate-900 px-2 py-0.5 rounded-md border-2 border-slate-900 font-bold">
+            {{ filteredSudokuHistory.length }} Ganadas
+          </span>
+        </h2>
+                 
+        <div class="grid grid-cols-2 gap-2 mb-4 p-2 bg-slate-100 dark:bg-slate-700/50 rounded-xl border-2 border-slate-900 dark:border-black">
+          <div>
+            <label class="block text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-300 mb-1">Filtrar por Día</label>
+            <input type="date" [(ngModel)]="filterDate"
+                    class="w-full p-1 bg-white dark:bg-slate-800 border-2 border-slate-900 dark:border-black text-xs font-bold rounded-lg focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-300 mb-1">Duración</label>
+            <select [(ngModel)]="sortByDuration"
+                     class="w-full p-1 bg-white dark:bg-slate-800 border-2 border-slate-900 dark:border-black text-xs font-bold rounded-lg focus:outline-none">
+              <option value="">Sin ordenar</option>
+              <option value="asc">Menor tiempo primero</option>
+              <option value="desc">Mayor tiempo primero</option>
+            </select>
+          </div>
+        </div>
+
+        <div *ngIf="filteredSudokuHistory.length > 0; else noSudoku" class="flex flex-col gap-2 max-h-60 overflow-y-auto pr-1">
+          <div *ngFor="let match of filteredSudokuHistory"
+                class="bg-slate-50 dark:bg-slate-700 p-3 rounded-xl border-2 border-slate-900 dark:border-black flex justify-between items-center shadow-[2px_2px_0_0_#000]">
+            <div>
+              <div class="text-xs font-black uppercase tracking-tight"
+                   [ngClass]="{
+                     'text-[#34d399]': match.difficulty === 30,
+                     'text-[#fbbf24]': match.difficulty === 40,
+                     'text-[#f43f5e]': match.difficulty === 50
+                   }">
+                {{ getSudokuDifficulty(match.difficulty) }}
+              </div>
+              <div class="text-[10px] text-slate-400 dark:text-slate-300 font-bold">
+                {{ formatDateTime(match.endTime) }}
+              </div>
+            </div>
+            <div class="text-right">
+              <div class="text-base font-black font-mono">
+                <i class="fa-regular fa-clock text-slate-400 mr-1 text-xs"></i>{{ formatDuration(match.timeElapsed) }}
+              </div>
+            </div>
+          </div>
+        </div>
+        <ng-template #noSudoku>
+          <div class="text-center p-6 bg-slate-50 dark:bg-slate-800 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-600 text-slate-400 font-bold text-xs">
+            No hay partidas que coincidan con los filtros.
+          </div>
+        </ng-template>
+      </div>
+
+      <div class="w-full">
+        <h2 class="text-xl font-black mb-3 border-b-4 border-slate-900 dark:border-slate-700 pb-1">
+          <i class="fa-solid fa-font mr-2"></i>Wordle (Hoy)
+        </h2>
+                 
+        <div *ngIf="wordleState" class="flex flex-col gap-2 w-full">
+          <div class="bg-slate-50 dark:bg-slate-700 p-3 rounded-xl border-2 border-slate-900 dark:border-black flex justify-between items-center">
+            <div>
+              <span class="font-black text-sm text-[#34d399]">Español</span>
+              <div class="text-[10px] text-slate-400 dark:text-slate-300 font-bold">Estado: {{ getWordleStatus(wordleState.es.gameStatus) }}</div>
+            </div>
+            <div class="font-black text-sm bg-white dark:bg-slate-800 px-2 py-1 rounded-lg border-2 border-slate-900 dark:border-black font-mono">
+              {{ wordleState.es.guesses.length }}/6
+            </div>
+          </div>
+          <div class="bg-slate-50 dark:bg-slate-700 p-3 rounded-xl border-2 border-slate-900 dark:border-black flex justify-between items-center">
+            <div>
+              <span class="font-black text-sm text-[#8b5cf6]">English</span>
+              <div class="text-[10px] text-slate-400 dark:text-slate-300 font-bold">Estado: {{ getWordleStatus(wordleState.en.gameStatus) }}</div>
+            </div>
+            <div class="font-black text-sm bg-white dark:bg-slate-800 px-2 py-1 rounded-lg border-2 border-slate-900 dark:border-black font-mono">
+              {{ wordleState.en.guesses.length }}/6
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- NUEVO HISTORIAL DE WORDLE -->
+      <div class="w-full mt-6">
+        <h2 class="text-xl font-black mb-3 border-b-4 border-slate-900 dark:border-slate-700 pb-1 flex justify-between items-center">
+          <span><i class="fa-solid fa-clock-rotate-left mr-2"></i>Historial Wordle</span>
+          <span class="text-xs bg-indigo-400 text-slate-900 px-2 py-0.5 rounded-md border-2 border-slate-900 font-bold" *ngIf="wordleHistory.length > 0">
+            {{ wordleHistory.length }} Partidas
+          </span>
+        </h2>
+
+        <div *ngIf="wordleHistory.length > 0; else noWordle" class="flex flex-col gap-2 max-h-60 overflow-y-auto pr-1">
+          <div *ngFor="let match of reversedWordleHistory" 
+                class="bg-slate-50 dark:bg-slate-700 p-3 rounded-xl border-2 border-slate-900 dark:border-black flex justify-between items-center shadow-[2px_2px_0_0_#000]">
+            <div>
+              <div class="text-xs font-black uppercase tracking-tight"
+                   [ngClass]="match.language === 'es' ? 'text-[#34d399]' : 'text-[#8b5cf6]'">
+                {{ match.language === 'es' ? 'Español' : 'English' }}
+              </div>
+              <div class="text-[10px] text-slate-400 dark:text-slate-300 font-bold">
+                {{ formatDateTime(match.date) }}
+              </div>
+            </div>
+            <div class="text-right flex flex-col items-end">
+              <span class="font-black text-sm px-2 py-0.5 rounded-md border-2 border-slate-900 dark:border-black"
+                    [ngClass]="match.status === 'won' ? 'bg-[#34d399] text-slate-900' : 'bg-rose-400 text-slate-900'">
+                {{ match.attempts }}/6
+              </span>
+              <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400 mt-1 uppercase">
+                {{ match.word }}
+              </span>
+            </div>
+          </div>
+        </div>
+        <ng-template #noWordle>
+          <div class="text-center p-6 bg-slate-50 dark:bg-slate-800 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-600 text-slate-400 font-bold text-xs">
+            Aún no hay partidas de Wordle guardadas en el historial.
+          </div>
+        </ng-template>
+      </div>
+
+    </div>
+  </div>
+</div>

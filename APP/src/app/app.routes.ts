@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { HomeComponent } from './pages/home/home.component';
 import { SudokuComponent } from './pages/sudoku/sudoku.component';
 import { WordleComponent } from './pages/wordle/wordle.component';
+import { StatsComponent } from './pages/stats/stats.component';
 
 export const routes: Routes = [
     {
@@ -15,6 +16,10 @@ export const routes: Routes = [
     {
         path:'wordle',
         component: WordleComponent
+    },
+    {
+        path:'stats',
+        component: StatsComponent
     },
     {
         path:'**',

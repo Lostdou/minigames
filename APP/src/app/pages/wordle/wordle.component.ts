@@ -75,7 +75,6 @@ export class WordleComponent implements OnInit {
     // obtiene la palabra del dia según el idioma actual
     this.targetWord = WordleGenerator.getDailyWord(this.dictionary[this.currentLang]);
 
-    // leemos los intentos directamente de nuestra copia de estado local
     const langState = this.wordleState[this.currentLang];
     this.guesses = [...langState.guesses];
     this.gameStatus = langState.gameStatus;
@@ -131,8 +130,9 @@ export class WordleComponent implements OnInit {
       return;
     }
 
-    // si es valida, se guarda
     this.guesses.push(this.currentGuess);
+    
+    const wasPlaying = this.gameStatus === 'playing';
     
     if (this.currentGuess === this.targetWord) {
       this.gameStatus = 'won';
@@ -147,6 +147,17 @@ export class WordleComponent implements OnInit {
     updatedState[this.currentLang].lastPlayedDate = WordleGenerator.getTodaySeed();
     
     this.storageService.saveWordleGame(updatedState);
+
+    // agregar al historial si acaba de ganar o perder
+    if (wasPlaying && this.gameStatus !== 'playing') {
+      this.storageService.addCompletedWordle({
+        language: this.currentLang,
+        date: Date.now(),
+        attempts: this.guesses.length,
+        status: this.gameStatus,
+        word: this.targetWord
+      });
+    }
     
     this.updateKeyboardStatuses();
     

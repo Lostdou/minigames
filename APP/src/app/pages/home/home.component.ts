@@ -23,6 +23,12 @@ export class HomeComponent implements OnInit {
       route: '/wordle',
       bgClass: 'bg-[#f43f5e] dark:bg-[#e11d48]',
       textClass: 'text-white',
+    },
+    {
+      title: 'Estadisticas',
+      route: '/stats',
+      bgClass: 'bg-[#34d399] dark:bg-[#059669]',
+      textClass: 'text-slate-900',
     }
   ];
 

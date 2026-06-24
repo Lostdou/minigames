@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router'; 
 import { StorageService, SudokuState } from '../../services/storage.service';
@@ -9,7 +9,7 @@ import { StorageService, SudokuState } from '../../services/storage.service';
   imports: [CommonModule, RouterLink], 
   templateUrl: './sudoku.component.html'
 })
-export class SudokuComponent implements OnInit {
+export class SudokuComponent implements OnInit, OnDestroy {
   gameState: SudokuState | null = null;
   
   selectedRow: number = -1;
@@ -18,11 +18,37 @@ export class SudokuComponent implements OnInit {
   isDarkMode: boolean = false;
   animatingCells: {r: number, c: number}[] = [];
 
+  // Variables para el temporizador
+  timeElapsed: number = 0;
+  timerInterval: any;
+
+  errorMessage: string = '';
+
   constructor(private storageService: StorageService) {}
 
   ngOnInit(): void {
     this.storageService.sudokuState$.subscribe(state => {
+      // Detecta si es otro juego
+      const isDifferentGame = !this.gameState || !state || this.gameState.initialBoard !== state.initialBoard;
+      
       this.gameState = state;
+
+      if (state) {
+        if (isDifferentGame || state.timeElapsed === 0 || state.timeElapsed === undefined) {
+          this.timeElapsed = state.timeElapsed || 0;
+        }
+
+        // Iniciar o parar el temporizador dependiendo del estado
+        if (!state.isCompleted) {
+          this.startTimer();
+        } else {
+          this.timeElapsed = state.timeElapsed || 0;
+          this.stopTimer();
+        }
+      } else {
+        this.stopTimer();
+        this.timeElapsed = 0;
+      }
     });
 
     // modo oscuro
@@ -34,7 +60,48 @@ export class SudokuComponent implements OnInit {
     }
   }
 
-  // cambiar el modo oscuro y guardarlo
+  // --- temporizador ---
+  startTimer(): void {
+    if (!this.timerInterval) {
+      this.timerInterval = setInterval(() => {
+        this.timeElapsed++;
+        // autosave del tiempo cada 5 segundos
+        if (this.timeElapsed % 5 === 0 && this.gameState && !this.gameState.isCompleted) {
+          this.gameState.timeElapsed = this.timeElapsed;
+          localStorage.setItem('sudoku_save', JSON.stringify(this.gameState));
+        }
+      }, 1000);
+    }
+  }
+
+  stopTimer(): void {
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval);
+      this.timerInterval = null;
+    }
+  }
+
+  get formattedTime(): string {
+    const m = Math.floor(this.timeElapsed / 60);
+    const s = this.timeElapsed % 60;
+    return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
+  }
+
+  @HostListener('window:beforeunload')
+  saveTimeOnExit(): void {
+    // si se cierra o refresca la pestaña, se guarda el tiempo exacto
+    if (this.gameState && !this.gameState.isCompleted) {
+      this.gameState.timeElapsed = this.timeElapsed;
+      localStorage.setItem('sudoku_save', JSON.stringify(this.gameState));
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.saveTimeOnExit();
+    this.stopTimer();
+  }
+  // -------------------------------
+
   toggleDarkMode(): void {
     this.isDarkMode = !this.isDarkMode;
     localStorage.setItem('theme', this.isDarkMode ? 'dark' : 'light');
@@ -43,15 +110,8 @@ export class SudokuComponent implements OnInit {
   newGame(holes?: number): void {
     this.selectedRow = -1;
     this.selectedCol = -1;
-
-    if (holes == null) {
-      // si no se especifica, se toma la dificultad actual (default 40)
-      const currentDifficulty = this.gameState?.difficulty || 40;
-      this.storageService.startNewGame(currentDifficulty);
-    } else {
-      // facil(30) - medio(40) - dificil(50)
-      this.storageService.startNewGame(holes);
-    }
+    const currentDifficulty = this.gameState?.difficulty || 40;
+    this.storageService.startNewGame(holes == null ? currentDifficulty : holes);
   }
 
   selectCell(row: number, col: number): void {
@@ -61,14 +121,57 @@ export class SudokuComponent implements OnInit {
 
   inputNumber(num: number): void {
     if (!this.gameState || this.selectedRow === -1 || this.selectedCol === -1) return;
+    
+    // bloquear si es una celda inicial
     if (this.isInitialCell(this.selectedRow, this.selectedCol)) return;
+  
+    // bloquear si el juego ya termino
+    if (this.gameState.isCompleted) return; 
 
+    const currentValue = this.gameState.board[this.selectedRow][this.selectedCol];
+
+    // bloquear modificaciones si la casilla ya tiene el número correcto
+    if (currentValue !== 0 && currentValue === this.gameState.solvedBoard[this.selectedRow][this.selectedCol]) {
+      return; 
+    }
+
+    // evitar contar un error si vuelve a ingresar el mismo número equivocado que ya estaba
+    if (currentValue === num) return;
+
+    // actualizar el tablero con el nuevo número
     this.gameState.board[this.selectedRow][this.selectedCol] = num;
+    this.gameState.timeElapsed = this.timeElapsed; // Actualizar tiempo
     
-    const isCorrect = num !== 0 && num === this.gameState.solvedBoard[this.selectedRow][this.selectedCol];
-    
-    if (isCorrect) {
-      this.triggerSuccessAnimation(this.selectedRow, this.selectedCol);
+    if (num !== 0) {
+      const isCorrect = num === this.gameState.solvedBoard[this.selectedRow][this.selectedCol];
+      
+      if (isCorrect) {
+        this.triggerSuccessAnimation(this.selectedRow, this.selectedCol);
+      } else {
+        // logica de errores (solo en dificil)
+        if (this.gameState.difficulty === 50) {
+          this.gameState.mistakes = (this.gameState.mistakes || 0) + 1;
+          
+          if (this.gameState.mistakes >= 3) {
+            this.errorMessage = '¡Te quedaste sin intentos!';
+            
+            this.storageService.saveSudokuGame(this.gameState);
+            
+            setTimeout(() => {
+              this.changeDifficulty();
+              this.errorMessage = ''; 
+            }, 2500);
+            return;
+          }
+        }
+      }
+    }
+
+    // check si se completo el tablero
+    if (this.isBoardCompleted()) {
+      this.gameState.isCompleted = true;
+      this.stopTimer();
+      this.storageService.addCompletedSudoku(this.gameState.difficulty, this.timeElapsed);
     }
 
     this.storageService.saveSudokuGame(this.gameState);
@@ -78,17 +181,14 @@ export class SudokuComponent implements OnInit {
     let cellsToAnimate = [{r: row, c: col}];
     const currentNum = this.gameState!.board[row][col];
 
-    // completa fila
     if (this.checkRowCompleted(row)) {
       for (let i = 0; i < 9; i++) cellsToAnimate.push({r: row, c: i});
     }
 
-    // completa columna
     if (this.checkColCompleted(col)) {
       for (let i = 0; i < 9; i++) cellsToAnimate.push({r: i, c: col});
     }
 
-    // completa 3x3
     if (this.checkBoxCompleted(row, col)) {
       const startR = row - (row % 3);
       const startCol = col - (col % 3);
@@ -99,7 +199,6 @@ export class SudokuComponent implements OnInit {
       }
     }
     
-    // completa todas las casillas de un mismo numero
     if (this.isNumberCompleted(currentNum)) {
       for (let r = 0; r < 9; r++) {
         for (let c = 0; c < 9; c++) {
@@ -110,7 +209,6 @@ export class SudokuComponent implements OnInit {
       }
     }
 
-    // completa tablero
     if (this.isBoardCompleted()) {
       cellsToAnimate = [];
       for (let r = 0; r < 9; r++) {
@@ -119,8 +217,6 @@ export class SudokuComponent implements OnInit {
         }
       }
     }
-
-
 
     this.animatingCells = cellsToAnimate;
     setTimeout(() => { this.animatingCells = []; }, 600);
@@ -189,7 +285,6 @@ export class SudokuComponent implements OnInit {
 
     for (let r = 0; r < 9; r++) {
       for (let c = 0; c < 9; c++) {
-        // si hay una celda vacia o incorrecta, el tablero no esta completado
         if (this.gameState.board[r][c] === 0 || this.gameState.board[r][c] !== this.gameState.solvedBoard[r][c]) {
           return false;
         }
