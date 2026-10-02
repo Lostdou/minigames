@@ -1,6 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
+import { ThemeService } from '../../services/theme.service';
 
 @Component({
   selector: 'app-home',
@@ -8,9 +9,7 @@ import { RouterLink } from '@angular/router';
   imports: [CommonModule, RouterLink],
   templateUrl: './home.component.html'
 })
-export class HomeComponent implements OnInit {
-  isDarkMode: boolean = false;
-
+export class HomeComponent {
   games = [
     {
       title: 'Sudoku',
@@ -32,17 +31,13 @@ export class HomeComponent implements OnInit {
     }
   ];
 
-  ngOnInit(): void {
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme) {
-      this.isDarkMode = savedTheme === 'dark';
-    } else {
-      this.isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    }
+  constructor(private themeService: ThemeService) {}
+
+  get isDarkMode(): boolean {
+    return this.themeService.isDarkMode;
   }
 
   toggleDarkMode(): void {
-    this.isDarkMode = !this.isDarkMode;
-    localStorage.setItem('theme', this.isDarkMode ? 'dark' : 'light');
+    this.themeService.toggle();
   }
 }

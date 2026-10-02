@@ -1,21 +1,24 @@
-import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener, DestroyRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router'; 
+import { RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { StorageService, SudokuState } from '../../services/storage.service';
+import { ThemeService } from '../../services/theme.service';
 
 @Component({
   selector: 'app-sudoku',
   standalone: true,
-  imports: [CommonModule, RouterLink], 
+  imports: [CommonModule, RouterLink],
   templateUrl: './sudoku.component.html'
 })
 export class SudokuComponent implements OnInit, OnDestroy {
+  private destroyRef = inject(DestroyRef);
+
   gameState: SudokuState | null = null;
-  
+
   selectedRow: number = -1;
   selectedCol: number = -1;
 
-  isDarkMode: boolean = false;
   animatingCells: {r: number, c: number}[] = [];
 
   // Variables para el temporizador
@@ -23,41 +26,46 @@ export class SudokuComponent implements OnInit, OnDestroy {
   timerInterval: any;
 
   errorMessage: string = '';
+  // aviso de "sin intentos" antes de volver al selector
+  private gameOverTimeout: ReturnType<typeof setTimeout> | null = null;
 
-  constructor(private storageService: StorageService) {}
+  constructor(private storageService: StorageService, private themeService: ThemeService) {}
 
   ngOnInit(): void {
-    this.storageService.sudokuState$.subscribe(state => {
-      // Detecta si es otro juego
-      const isDifferentGame = !this.gameState || !state || this.gameState.initialBoard !== state.initialBoard;
-      
-      this.gameState = state;
+    this.storageService.sudokuState$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(state => {
+        // Detecta si es otro juego
+        const isDifferentGame = !this.gameState || !state || this.gameState.initialBoard !== state.initialBoard;
 
-      if (state) {
-        if (isDifferentGame || state.timeElapsed === 0 || state.timeElapsed === undefined) {
-          this.timeElapsed = state.timeElapsed || 0;
-        }
+        this.gameState = state;
 
-        // Iniciar o parar el temporizador dependiendo del estado
-        if (!state.isCompleted) {
-          this.startTimer();
+        if (state) {
+          if (isDifferentGame || state.timeElapsed === 0 || state.timeElapsed === undefined) {
+            this.timeElapsed = state.timeElapsed || 0;
+          }
+
+          // Iniciar o parar el temporizador dependiendo del estado
+          if (!state.isCompleted && !this.isGameOver) {
+            this.startTimer();
+          } else {
+            this.timeElapsed = state.timeElapsed || 0;
+            this.stopTimer();
+          }
         } else {
-          this.timeElapsed = state.timeElapsed || 0;
           this.stopTimer();
+          this.timeElapsed = 0;
         }
-      } else {
-        this.stopTimer();
-        this.timeElapsed = 0;
-      }
-    });
+      });
+  }
 
-    // modo oscuro
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme) {
-      this.isDarkMode = savedTheme === 'dark';
-    } else {
-      this.isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    }
+  get isDarkMode(): boolean {
+    return this.themeService.isDarkMode;
+  }
+
+  // dificil con 3 errores
+  get isGameOver(): boolean {
+    return !!this.gameState && this.gameState.difficulty === 50 && (this.gameState.mistakes || 0) >= 3;
   }
 
   // --- temporizador ---
@@ -87,24 +95,35 @@ export class SudokuComponent implements OnInit, OnDestroy {
     return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
   }
 
-  @HostListener('window:beforeunload')
+  @HostListener('window:pagehide')
   saveTimeOnExit(): void {
     // si se cierra o refresca la pestaña, se guarda el tiempo exacto
-    if (this.gameState && !this.gameState.isCompleted) {
+    if (this.gameState && !this.gameState.isCompleted && !this.isGameOver) {
       this.gameState.timeElapsed = this.timeElapsed;
       localStorage.setItem('sudoku_save', JSON.stringify(this.gameState));
     }
   }
 
+  // en movil/PWA no siempre hay evento al cerrar: se guarda al pasar a segundo plano
+  @HostListener('document:visibilitychange')
+  onVisibilityChange(): void {
+    if (document.visibilityState === 'hidden') {
+      this.saveTimeOnExit();
+    }
+  }
+
   ngOnDestroy(): void {
+    // si sale durante el aviso de "sin intentos", la partida perdida se descarta ya
+    if (this.gameOverTimeout) {
+      this.changeDifficulty();
+    }
     this.saveTimeOnExit();
     this.stopTimer();
   }
   // -------------------------------
 
   toggleDarkMode(): void {
-    this.isDarkMode = !this.isDarkMode;
-    localStorage.setItem('theme', this.isDarkMode ? 'dark' : 'light');
+    this.themeService.toggle();
   }
 
   newGame(holes?: number): void {
@@ -125,8 +144,8 @@ export class SudokuComponent implements OnInit, OnDestroy {
     // bloquear si es una celda inicial
     if (this.isInitialCell(this.selectedRow, this.selectedCol)) return;
   
-    // bloquear si el juego ya termino
-    if (this.gameState.isCompleted) return; 
+    // bloquear si el juego ya termino (completado o sin intentos)
+    if (this.gameState.isCompleted || this.isGameOver) return;
 
     const currentValue = this.gameState.board[this.selectedRow][this.selectedCol];
 
@@ -154,12 +173,12 @@ export class SudokuComponent implements OnInit, OnDestroy {
           
           if (this.gameState.mistakes >= 3) {
             this.errorMessage = '¡Te quedaste sin intentos!';
-            
+            this.stopTimer();
+
             this.storageService.saveSudokuGame(this.gameState);
-            
-            setTimeout(() => {
+
+            this.gameOverTimeout = setTimeout(() => {
               this.changeDifficulty();
-              this.errorMessage = ''; 
             }, 2500);
             return;
           }
@@ -294,12 +313,23 @@ export class SudokuComponent implements OnInit, OnDestroy {
   }
 
   resetCurrentBoard(): void {
+    this.clearGameOver();
     this.selectedRow = -1;
     this.selectedCol = -1;
     this.storageService.restartCurrentBoard();
   }
 
   changeDifficulty(): void {
+    this.clearGameOver();
     this.storageService.clearSudokuGame();
+  }
+
+  // cancela el aviso pendiente para que no borre una partida nueva
+  private clearGameOver(): void {
+    if (this.gameOverTimeout) {
+      clearTimeout(this.gameOverTimeout);
+      this.gameOverTimeout = null;
+    }
+    this.errorMessage = '';
   }
 }

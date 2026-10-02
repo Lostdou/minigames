@@ -62,7 +62,15 @@ export class StorageService {
   // ----- SUDOKU -----
   private loadSudokuInitialState(key: string): SudokuState | null {
     const saved = localStorage.getItem(key);
-    return saved ? JSON.parse(saved) : null;
+    if (!saved) return null;
+
+    const state: SudokuState = JSON.parse(saved);
+    // partida dificil perdida (se recargo durante el aviso de "sin intentos"): se descarta
+    if (state.difficulty === 50 && (state.mistakes || 0) >= 3) {
+      localStorage.removeItem(key);
+      return null;
+    }
+    return state;
   }
 
   private loadSudokuHistory(): CompletedSudoku[] {
@@ -132,15 +140,33 @@ export class StorageService {
 
     if (saved) {
       const parsed: WordleState = JSON.parse(saved);
-      if (parsed.es.lastPlayedDate !== today) {
-        parsed.es = { guesses: [], lastPlayedDate: today, gameStatus: 'playing' };
-      }
-      if (parsed.en.lastPlayedDate !== today) {
-        parsed.en = { guesses: [], lastPlayedDate: today, gameStatus: 'playing' };
-      }
+      this.resetStaleWordleLangs(parsed, today);
       return parsed;
     }
     return defaultState;
+  }
+
+  // si el estado es de otro dia, resetea ese idioma para hoy
+  private resetStaleWordleLangs(state: WordleState, today: number): boolean {
+    let changed = false;
+    for (const lang of ['es', 'en'] as const) {
+      if (state[lang].lastPlayedDate !== today) {
+        state[lang] = { guesses: [], lastPlayedDate: today, gameStatus: 'playing' };
+        changed = true;
+      }
+    }
+    return changed;
+  }
+
+  // la app puede quedar abierta pasada la medianoche (PWA en memoria)
+  // devuelve true si hubo que resetear
+  ensureWordleIsToday(): boolean {
+    const state: WordleState = JSON.parse(JSON.stringify(this.wordleStateSource.getValue()));
+    if (this.resetStaleWordleLangs(state, WordleGenerator.getTodaySeed())) {
+      this.saveWordleGame(state);
+      return true;
+    }
+    return false;
   }
 
   private loadWordleHistory(): CompletedWordle[] {

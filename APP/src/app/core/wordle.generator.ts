@@ -1,7 +1,11 @@
 export type LetterStatus = 'correct' | 'present' | 'absent' | 'empty';
 
 export class WordleGenerator {
-  
+
+    // desde este dia la palabra diaria deja de ser la siguiente de la lista
+    private static readonly NEW_SEED_FROM = 20261003;
+    // primo y coprimo con el largo de los diccionarios: recorre todas las palabras sin repetir
+    private static readonly WORD_STEP = 7919;
 
     // genera la palabra diaria, segun el dia del dispositivo
     public static getDailyWord(dictionary: string[]): string {
@@ -9,8 +13,15 @@ export class WordleGenerator {
 
         const now = new Date();
         const dateSeed = now.getFullYear() * 10000 + (now.getMonth() + 1) * 100 + now.getDate();
-        const index = dateSeed % dictionary.length;
-        
+
+        let index: number;
+        if (dateSeed < WordleGenerator.NEW_SEED_FROM) {
+            index = dateSeed % dictionary.length;
+        } else {
+            const dayNumber = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / 86400000;
+            index = (dayNumber * WordleGenerator.WORD_STEP) % dictionary.length;
+        }
+
         return dictionary[index].toUpperCase();
     }
 

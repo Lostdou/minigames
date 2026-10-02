@@ -7,15 +7,16 @@
       "installMode": "prefetch",
       "resources": {
         "files": [
-          "/favicon.ico",
-          "/index.csr.html",
+          "/icon.ico",
           "/index.html",
           "/manifest.webmanifest",
+          "/words.json",
           "/*.css",
           "/*.js"
         ],
         "urls": [
           "https://fonts.googleapis.com/**",
+          "https://fonts.gstatic.com/**",
           "https://cdnjs.cloudflare.com/**"
         ]
       }

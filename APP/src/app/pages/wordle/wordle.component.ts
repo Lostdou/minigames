@@ -1,8 +1,10 @@
-import { Component, OnInit, HostListener } from '@angular/core';
+import { Component, OnInit, HostListener, DestroyRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { StorageService, WordleState } from '../../services/storage.service';
+import { ThemeService } from '../../services/theme.service';
 import { WordleGenerator, LetterStatus } from '../../core/wordle.generator';
 
 @Component({
@@ -12,8 +14,8 @@ import { WordleGenerator, LetterStatus } from '../../core/wordle.generator';
   templateUrl: './wordle.component.html'
 })
 export class WordleComponent implements OnInit {
-  isDarkMode: boolean = false;
-  
+  private destroyRef = inject(DestroyRef);
+
   // dict cargado del JSON
   dictionary: { es: string[], en: string[] } | null = null;
   
@@ -27,31 +29,29 @@ export class WordleComponent implements OnInit {
 
   // variables para UI
   errorMessage: string = '';
+  private errorTimeout: ReturnType<typeof setTimeout> | null = null;
   keyboardStatuses: { [key: string]: LetterStatus } = {};
 
   // copia local del estado completo para evitar bugs al cambiar idioma
   private wordleState: WordleState | null = null;
 
-  constructor(private http: HttpClient, private storageService: StorageService) {}
+  constructor(private http: HttpClient, private storageService: StorageService, private themeService: ThemeService) {}
 
   ngOnInit(): void {
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme) {
-      this.isDarkMode = savedTheme === 'dark';
-    } else {
-      this.isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    }
+    // si la app quedo abierta desde ayer, arranca la partida de hoy
+    this.storageService.ensureWordleIsToday();
 
     // se suscribe al estado guardado localmente
-    this.storageService.wordleState$.subscribe(state => {
-      this.wordleState = state;
-      this.loadGameData();
-    });
+    this.storageService.wordleState$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(state => {
+        this.wordleState = state;
+        this.loadGameData();
+      });
 
     // carga y normaliza el json (gracias claude por pasarme las palabras con tilde)
     this.http.get<{es: string[], en: string[]}>('words.json').subscribe({
       next: (data) => {
-        console.log(data)
         this.dictionary = {
           es: data.es.map(word => this.normalizeWord(word)),
           en: data.en.map(word => this.normalizeWord(word))
@@ -64,9 +64,20 @@ export class WordleComponent implements OnInit {
     });
   }
 
+  get isDarkMode(): boolean {
+    return this.themeService.isDarkMode;
+  }
+
   toggleDarkMode(): void {
-    this.isDarkMode = !this.isDarkMode;
-    localStorage.setItem('theme', this.isDarkMode ? 'dark' : 'light');
+    this.themeService.toggle();
+  }
+
+  // al volver a la app (ej: PWA en segundo plano desde ayer) chequea si cambio el dia
+  @HostListener('document:visibilitychange')
+  onVisibilityChange(): void {
+    if (document.visibilityState === 'visible') {
+      this.storageService.ensureWordleIsToday();
+    }
   }
 
   loadGameData(): void {
@@ -93,13 +104,20 @@ export class WordleComponent implements OnInit {
   handleKeyDown(event: KeyboardEvent): void {
     if (this.gameStatus !== 'playing') return;
 
+    // no capturar atajos del navegador (ctrl+c, ctrl+r, etc)
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+
     const key = event.key.toUpperCase();
 
+    // preventDefault evita que el enter tambien haga click en la tecla en pantalla que quedo con foco
     if (key === 'ENTER') {
+      event.preventDefault();
       this.submitGuess();
     } else if (key === 'BACKSPACE') {
+      event.preventDefault();
       this.deleteLetter();
-    } else if (/^[A-ZÑ]$/.test(key)) {
+    } else if (/^[A-Z]$/.test(key) || (key === 'Ñ' && this.currentLang === 'es')) {
+      event.preventDefault();
       this.addLetter(key);
     }
   }
@@ -117,6 +135,9 @@ export class WordleComponent implements OnInit {
   }
 
   submitGuess(): void {
+    // si cambio el dia, el tablero se reinicia con la palabra nueva y no se envia nada
+    if (this.storageService.ensureWordleIsToday()) return;
+
     if (this.currentGuess.length !== 5) {
       this.showError('La palabra debe tener 5 letras');
       return;
@@ -166,7 +187,9 @@ export class WordleComponent implements OnInit {
 
   private showError(msg: string): void {
     this.errorMessage = msg;
-    setTimeout(() => { this.errorMessage = ''; }, 2000);
+    // que un error anterior no borre este antes de tiempo
+    if (this.errorTimeout) clearTimeout(this.errorTimeout);
+    this.errorTimeout = setTimeout(() => { this.errorMessage = ''; }, 2000);
   }
 
   getStatusesForGuess(guess: string): LetterStatus[] {

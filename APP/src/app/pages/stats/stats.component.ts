@@ -1,9 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, DestroyRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { StorageService, CompletedSudoku, WordleState, CompletedWordle } from '../../services/storage.service';
+import { ThemeService } from '../../services/theme.service';
 
 @Component({
   selector: 'app-stats',
@@ -12,8 +14,8 @@ import { StorageService, CompletedSudoku, WordleState, CompletedWordle } from '.
   templateUrl: './stats.component.html'
 })
 export class StatsComponent implements OnInit {
-  isDarkMode: boolean = false;
-  
+  private destroyRef = inject(DestroyRef);
+
   sudokuHistory: CompletedSudoku[] = [];
   wordleState: WordleState | null = null;
   wordleHistory: CompletedWordle[] = [];
@@ -22,24 +24,29 @@ export class StatsComponent implements OnInit {
   filterDate: string = ''; 
   sortByDuration: 'asc' | 'desc' | '' = '';
 
-  constructor(private storageService: StorageService) {}
+  constructor(private storageService: StorageService, private themeService: ThemeService) {}
 
   ngOnInit(): void {
-    this.storageService.sudokuHistory$.subscribe(history => this.sudokuHistory = history);
-    this.storageService.wordleState$.subscribe(state => this.wordleState = state);
-    this.storageService.wordleHistory$.subscribe(history => this.wordleHistory = history);
+    // si cambio el dia con la app abierta, el wordle de "hoy" arranca de cero
+    this.storageService.ensureWordleIsToday();
 
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme) {
-      this.isDarkMode = savedTheme === 'dark';
-    } else {
-      this.isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    }
+    this.storageService.sudokuHistory$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(history => this.sudokuHistory = history);
+    this.storageService.wordleState$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(state => this.wordleState = state);
+    this.storageService.wordleHistory$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(history => this.wordleHistory = history);
+  }
+
+  get isDarkMode(): boolean {
+    return this.themeService.isDarkMode;
   }
 
   toggleDarkMode(): void {
-    this.isDarkMode = !this.isDarkMode;
-    localStorage.setItem('theme', this.isDarkMode ? 'dark' : 'light');
+    this.themeService.toggle();
   }
 
   get filteredSudokuHistory(): CompletedSudoku[] {

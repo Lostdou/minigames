@@ -1,4 +1,4 @@
-name: Deploy en gh-pahes
+name: Deploy en gh-pages
 
 on:
   push:
@@ -29,6 +29,10 @@ jobs:
       - name: Construir el proyecto (PWA)
         working-directory: ./APP
         run: npm run build -- --configuration production
+
+      # GitHub Pages no conoce las rutas de Angular: sin esto, recargar en /sudoku da 404
+      - name: Fallback de rutas (404.html)
+        run: cp ./APP/dist/app/browser/index.html ./APP/dist/app/browser/404.html
 
       - name: Desplegar a GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
